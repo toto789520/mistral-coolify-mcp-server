@@ -1,35 +1,18 @@
 import 'dotenv/config';
 import express from 'express';
-import { Server } from 'mcp/server';
-import { StdioServerTransport } from 'mcp/server/stdio';
 import coolifyClient from './coolify.js';
 import auth from './auth.js';
 
 const PORT = process.env.MCP_SERVER_PORT || 3000;
 const HOST = process.env.MCP_SERVER_HOST || '0.0.0.0';
 
-const server = new Server(
-  {
-    name: 'coolify-mcp-server',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
-
+// Implémentation manuelle MCP - pas besoin de SDK
 const tools = {
   list_projects: {
     name: 'list_projects',
     description: 'Liste tous les projets Coolify',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-      required: [],
-    },
-    handler: async (args) => {
+    parameters: { type: 'object', properties: {} },
+    handler: async (params) => {
       await auth.verifyRequest();
       return await coolifyClient.listProjects();
     },
@@ -37,146 +20,103 @@ const tools = {
   get_project: {
     name: 'get_project',
     description: 'Recupere les details dun projet Coolify',
-    inputSchema: {
+    parameters: {
       type: 'object',
-      properties: {
-        projectId: {
-          type: 'string',
-          description: 'ID du projet Coolify',
-        },
-      },
+      properties: { projectId: { type: 'string', description: 'ID du projet Coolify' } },
       required: ['projectId'],
     },
-    handler: async (args) => {
+    handler: async (params) => {
       await auth.verifyRequest();
-      return await coolifyClient.getProject(args.projectId);
+      return await coolifyClient.getProject(params.projectId);
     },
   },
   list_services: {
     name: 'list_services',
     description: 'Liste tous les services dun projet',
-    inputSchema: {
+    parameters: {
       type: 'object',
-      properties: {
-        projectId: {
-          type: 'string',
-          description: 'ID du projet Coolify',
-        },
-      },
+      properties: { projectId: { type: 'string', description: 'ID du projet Coolify' } },
       required: ['projectId'],
     },
-    handler: async (args) => {
+    handler: async (params) => {
       await auth.verifyRequest();
-      return await coolifyClient.listServices(args.projectId);
+      return await coolifyClient.listServices(params.projectId);
     },
   },
   deploy_service: {
     name: 'deploy_service',
     description: 'Deploie un service Coolify',
-    inputSchema: {
+    parameters: {
       type: 'object',
       properties: {
-        projectId: {
-          type: 'string',
-          description: 'ID du projet Coolify',
-        },
-        serviceId: {
-          type: 'string',
-          description: 'ID du service a deployer',
-        },
-        force: {
-          type: 'boolean',
-          description: 'Forcer le deploiement',
-          default: false,
-        },
+        projectId: { type: 'string', description: 'ID du projet Coolify' },
+        serviceId: { type: 'string', description: 'ID du service a deployer' },
+        force: { type: 'boolean', description: 'Forcer le deploiement', default: false },
       },
       required: ['projectId', 'serviceId'],
     },
-    handler: async (args) => {
+    handler: async (params) => {
       await auth.verifyRequest();
-      return await coolifyClient.deployService(args.projectId, args.serviceId, args.force);
+      return await coolifyClient.deployService(params.projectId, params.serviceId, params.force);
     },
   },
   get_service_logs: {
     name: 'get_service_logs',
     description: 'Recupere les logs dun service',
-    inputSchema: {
+    parameters: {
       type: 'object',
       properties: {
-        projectId: {
-          type: 'string',
-          description: 'ID du projet Coolify',
-        },
-        serviceId: {
-          type: 'string',
-          description: 'ID du service',
-        },
-        lines: {
-          type: 'number',
-          description: 'Nombre de lignes de logs a recuperer',
-          default: 100,
-        },
+        projectId: { type: 'string', description: 'ID du projet Coolify' },
+        serviceId: { type: 'string', description: 'ID du service' },
+        lines: { type: 'number', description: 'Nombre de lignes de logs', default: 100 },
       },
       required: ['projectId', 'serviceId'],
     },
-    handler: async (args) => {
+    handler: async (params) => {
       await auth.verifyRequest();
-      return await coolifyClient.getServiceLogs(args.projectId, args.serviceId, args.lines);
+      return await coolifyClient.getServiceLogs(params.projectId, params.serviceId, params.lines);
     },
   },
 };
 
-Object.entries(tools).forEach(([name, tool]) => {
-  server.tool(tool.name, tool.description, tool.inputSchema, tool.handler);
+// Serveur HTTP pour MCP
+const app = express();
+app.use(express.json());
+
+app.get('/mcp/tools', async (req, res) => {
+  try {
+    await auth.verifyRequest(req);
+    const toolsList = Object.values(tools).map(t => ({
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters,
+    }));
+    res.json({ tools: toolsList });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
 });
 
-async function startStdioServer() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.log('Serveur MCP started in stdio mode');
-}
-
-async function startHttpServer() {
-  const app = express();
-  app.use(express.json());
-
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  app.get('/tools', async (req, res) => {
-    try {
-      const toolsList = await server.listTools();
-      res.json(toolsList);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post('/tools/:name', async (req, res) => {
-    try {
-      await auth.verifyRequest(req);
-      const { name } = req.params;
-      const args = req.body;
-      const result = await server.callTool(name, args);
-      res.json(result);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.listen(PORT, HOST, () => {
-    console.log('HTTP server started on port ' + PORT);
-  });
-}
-
-(async () => {
+app.post('/mcp/tools/:name', async (req, res) => {
   try {
-    await startStdioServer();
-    await startHttpServer();
-    console.log('MCP and HTTP servers started successfully');
+    await auth.verifyRequest(req);
+    const { name } = req.params;
+    const params = req.body;
+    const tool = tools[name];
+    if (!tool) {
+      return res.status(404).json({ error: 'Tool not found' });
+    }
+    const result = await tool.handler(params);
+    res.json({ result });
   } catch (error) {
-    console.error('Startup error:', error);
-    process.exit(1);
+    res.status(400).json({ error: error.message });
   }
-})();
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`MCP server running on http://${HOST}:${PORT}`);
+});
