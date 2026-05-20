@@ -2,7 +2,7 @@ const AUTH_SECRET = process.env.AUTH_SECRET;
 
 async function verifyRequest(req) {
   if (!AUTH_SECRET) {
-    return; // Pas de secret configuré, on autorise tout
+    return;
   }
 
   if (!req) {
@@ -22,6 +22,6 @@ async function verifyRequest(req) {
   }
 }
 
-module.exports = {
+export default {
   verifyRequest,
 };
