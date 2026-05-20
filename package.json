@@ -1,12 +1,13 @@
 {
   "name": "mistral-coolify-mcp-server",
-  "version": "1.0.0",
-  "description": "Serveur MCP pour connecter Mistral a Coolify",
-  "main": "src/index.js",
+  "version": "2.0.0",
+  "description": "Serveur MCP standard pour connecter Mistral à Coolify",
+  "main": "src/mcp-server.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "start": "node src/mcp-server.js",
+    "start:legacy": "node src/index.js",
+    "dev": "node --watch src/mcp-server.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
