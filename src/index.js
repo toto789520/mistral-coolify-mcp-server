@@ -1,9 +1,9 @@
-require('dotenv').config();
-const express = require('express');
-const { Server } = require('@modelcontextprotocol/sdk/server');
-const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio');
-const coolifyClient = require('./coolify');
-const auth = require('./auth');
+import 'dotenv/config';
+import express from 'express';
+import { Server } from 'mcp/server';
+import { StdioServerTransport } from 'mcp/server/stdio';
+import coolifyClient from './coolify.js';
+import auth from './auth.js';
 
 const PORT = process.env.MCP_SERVER_PORT || 3000;
 const HOST = process.env.MCP_SERVER_HOST || '0.0.0.0';
@@ -40,7 +40,10 @@ const tools = {
     inputSchema: {
       type: 'object',
       properties: {
-        projectId: { type: 'string', description: 'ID du projet Coolify' },
+        projectId: {
+          type: 'string',
+          description: 'ID du projet Coolify',
+        },
       },
       required: ['projectId'],
     },
@@ -55,7 +58,10 @@ const tools = {
     inputSchema: {
       type: 'object',
       properties: {
-        projectId: { type: 'string', description: 'ID du projet Coolify' },
+        projectId: {
+          type: 'string',
+          description: 'ID du projet Coolify',
+        },
       },
       required: ['projectId'],
     },
@@ -70,9 +76,19 @@ const tools = {
     inputSchema: {
       type: 'object',
       properties: {
-        projectId: { type: 'string', description: 'ID du projet Coolify' },
-        serviceId: { type: 'string', description: 'ID du service a deployer' },
-        force: { type: 'boolean', description: 'Forcer le deploiement', default: false },
+        projectId: {
+          type: 'string',
+          description: 'ID du projet Coolify',
+        },
+        serviceId: {
+          type: 'string',
+          description: 'ID du service a deployer',
+        },
+        force: {
+          type: 'boolean',
+          description: 'Forcer le deploiement',
+          default: false,
+        },
       },
       required: ['projectId', 'serviceId'],
     },
@@ -87,9 +103,19 @@ const tools = {
     inputSchema: {
       type: 'object',
       properties: {
-        projectId: { type: 'string', description: 'ID du projet Coolify' },
-        serviceId: { type: 'string', description: 'ID du service' },
-        lines: { type: 'number', description: 'Nombre de lignes de logs a recuperer', default: 100 },
+        projectId: {
+          type: 'string',
+          description: 'ID du projet Coolify',
+        },
+        serviceId: {
+          type: 'string',
+          description: 'ID du service',
+        },
+        lines: {
+          type: 'number',
+          description: 'Nombre de lignes de logs a recuperer',
+          default: 100,
+        },
       },
       required: ['projectId', 'serviceId'],
     },
