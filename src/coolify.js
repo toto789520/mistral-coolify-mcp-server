@@ -1,4 +1,4 @@
-const axios = require('axios');
+import axios from 'axios';
 
 const COOLIFY_URL = process.env.COOLIFY_URL;
 const COOLIFY_API_TOKEN = process.env.COOLIFY_API_TOKEN;
@@ -99,7 +99,7 @@ async function getServiceLogs(projectId, serviceId, lines = 100) {
   }
 }
 
-module.exports = {
+export default {
   listProjects,
   getProject,
   listServices,
